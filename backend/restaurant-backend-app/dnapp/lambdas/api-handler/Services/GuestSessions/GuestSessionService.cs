@@ -203,10 +203,10 @@ public class GuestSessionService(
 
     public async Task<GetAllSessionsResponse> DeleteGuestSessionAsync(string userId, string groupReservationId, string guestSessionId)
     {
-        Reservation reservation = await ValidateReservationOwnerAsync(groupReservationId, userId);
-
         var session = await guestSessionRepository.GetByGuestSessionId(guestSessionId)
             ?? throw new GuestSessionNotFoundException($"Guest session with id {guestSessionId} not found.");
+
+        Reservation reservation = await ValidateReservationOwnerAsync(groupReservationId, userId);
 
         if (session.GroupReservationId != groupReservationId)
         {

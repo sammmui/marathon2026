@@ -1217,6 +1217,17 @@ Response: 200 OK
 Response: 200 OK
 ```json
 {
-  "message": "Guest session removed from group successfully."
+  "participants": [
+    {
+      "id": "session2",
+      "type": "Guest",
+      "name": "Olena",
+      "items": [],
+      "total": 220,
+      "isSubmitted": false
+    }
+  ],
+  "total": 220
 }
 ```
+Owner only. Returns 404 if the guest session does not exist, 400 if it belongs to another group, and 403 if the caller does not own the reservation.

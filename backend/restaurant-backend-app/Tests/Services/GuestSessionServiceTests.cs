@@ -798,6 +798,156 @@ public class GuestSessionServiceTests
 
     [Theory]
     [AutoData]
+    public async Task DeleteGuestSessionAsync_OwnerDeletesSession_ReturnsUpdatedSnapshot(
+        string userId,
+        GroupReservation groupReservation,
+        Reservation reservation,
+        GuestSession sessionToDelete,
+        GuestSession remainingSession,
+        Dish remainingDish)
+    {
+        groupReservation.ReservationId = reservation.Id;
+        reservation.CustomerId = userId;
+        sessionToDelete.GroupReservationId = groupReservation.GroupReservationId;
+        remainingSession.GroupReservationId = groupReservation.GroupReservationId;
+        remainingSession.GuestName = "Remaining guest";
+        remainingSession.IsOwnerSession = false;
+        remainingSession.Dishes = [new OrderItem { DishId = remainingDish.Id, Quantity = 2 }];
+        remainingDish.Price = 25;
+
+        _mockGuestSessionRepository
+            .Setup(repository => repository.GetByGuestSessionId(sessionToDelete.Id))
+            .ReturnsAsync(sessionToDelete);
+        _mockGroupReservationRepository
+            .Setup(repository => repository.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync(groupReservation);
+        _mockReservationRepository
+            .Setup(repository => repository.GetReservationByIdAsync(reservation.Id))
+            .ReturnsAsync(reservation);
+        _mockGuestSessionRepository
+            .Setup(repository => repository.DeleteAsync(sessionToDelete))
+            .Returns(Task.CompletedTask);
+        _mockGuestSessionRepository
+            .Setup(repository => repository.GetAllByGroupReservationIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync([remainingSession]);
+        _mockDishRepository
+            .Setup(repository => repository.GetDishesByIdsAsync(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync([remainingDish]);
+
+        GetAllSessionsResponse result = await _guestSessionService.DeleteGuestSessionAsync(
+            userId,
+            groupReservation.GroupReservationId,
+            sessionToDelete.Id);
+
+        Assert.Equal(50, result.Total);
+        Assert.Collection(result.Participants,
+            participant =>
+            {
+                Assert.Equal(remainingSession.Id, participant.Id);
+                Assert.Equal("Remaining guest", participant.Name);
+                Assert.Equal(50, participant.Total);
+            });
+        _mockGuestSessionRepository.Verify(repository => repository.DeleteAsync(sessionToDelete), Times.Once);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task DeleteGuestSessionAsync_SessionNotFound_ThrowsGuestSessionNotFoundException(
+        string userId,
+        string groupReservationId,
+        string guestSessionId)
+    {
+        _mockGuestSessionRepository
+            .Setup(repository => repository.GetByGuestSessionId(guestSessionId))
+            .ReturnsAsync((GuestSession?)null);
+
+        await Assert.ThrowsAsync<GuestSessionNotFoundException>(() =>
+            _guestSessionService.DeleteGuestSessionAsync(userId, groupReservationId, guestSessionId));
+
+        _mockGuestSessionRepository.Verify(repository => repository.DeleteAsync(It.IsAny<GuestSession>()), Times.Never);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task DeleteGuestSessionAsync_SessionNotFound_IsCheckedBeforeGroupValidation(
+        string userId,
+        string groupReservationId,
+        string guestSessionId)
+    {
+        _mockGuestSessionRepository
+            .Setup(repository => repository.GetByGuestSessionId(guestSessionId))
+            .ReturnsAsync((GuestSession?)null);
+
+        await Assert.ThrowsAsync<GuestSessionNotFoundException>(() =>
+            _guestSessionService.DeleteGuestSessionAsync(userId, groupReservationId, guestSessionId));
+
+        _mockGroupReservationRepository.Verify(
+            repository => repository.GetGroupReservationByIdAsync(groupReservationId),
+            Times.Never);
+        _mockGuestSessionRepository.Verify(repository => repository.DeleteAsync(It.IsAny<GuestSession>()), Times.Never);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task DeleteGuestSessionAsync_SessionBelongsToAnotherGroup_ThrowsValidationException(
+        string userId,
+        GroupReservation groupReservation,
+        Reservation reservation,
+        GuestSession session,
+        string otherGroupReservationId)
+    {
+        groupReservation.ReservationId = reservation.Id;
+        reservation.CustomerId = userId;
+        otherGroupReservationId = groupReservation.GroupReservationId + "-other";
+        session.GroupReservationId = otherGroupReservationId;
+
+        _mockGuestSessionRepository
+            .Setup(repository => repository.GetByGuestSessionId(session.Id))
+            .ReturnsAsync(session);
+        _mockGroupReservationRepository
+            .Setup(repository => repository.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync(groupReservation);
+        _mockReservationRepository
+            .Setup(repository => repository.GetReservationByIdAsync(reservation.Id))
+            .ReturnsAsync(reservation);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _guestSessionService.DeleteGuestSessionAsync(userId, groupReservation.GroupReservationId, session.Id));
+
+        _mockGuestSessionRepository.Verify(repository => repository.DeleteAsync(It.IsAny<GuestSession>()), Times.Never);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task DeleteGuestSessionAsync_NonOwner_ThrowsActionForbiddenException(
+        string ownerId,
+        string otherUserId,
+        GroupReservation groupReservation,
+        Reservation reservation,
+        GuestSession session)
+    {
+        groupReservation.ReservationId = reservation.Id;
+        otherUserId = ownerId + "-other";
+        reservation.CustomerId = ownerId;
+        session.GroupReservationId = groupReservation.GroupReservationId;
+
+        _mockGuestSessionRepository
+            .Setup(repository => repository.GetByGuestSessionId(session.Id))
+            .ReturnsAsync(session);
+        _mockGroupReservationRepository
+            .Setup(repository => repository.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync(groupReservation);
+        _mockReservationRepository
+            .Setup(repository => repository.GetReservationByIdAsync(reservation.Id))
+            .ReturnsAsync(reservation);
+
+        await Assert.ThrowsAsync<ActionForbiddenException>(() =>
+            _guestSessionService.DeleteGuestSessionAsync(otherUserId, groupReservation.GroupReservationId, session.Id));
+
+        _mockGuestSessionRepository.Verify(repository => repository.DeleteAsync(It.IsAny<GuestSession>()), Times.Never);
+    }
+    [Theory]
+    [AutoData]
     public async Task GetOrCreateOwnerGuestSessionIdAsync_ExistingOwnerSession_ReturnsExistingId(
         string userId,
         Reservation reservation,
