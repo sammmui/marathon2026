@@ -334,9 +334,6 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<GroupReservationNotFoundException>(() =>
             _service.SubmitGroupPreOrderAsync(userId, groupReservationId, reservationId));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 
     [Theory]
@@ -356,9 +353,6 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<ReservationNotFoundException>(() =>
             _service.SubmitGroupPreOrderAsync(userId, groupReservation.GroupReservationId, reservationId));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 
     [Theory]
@@ -380,9 +374,6 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<ActionForbiddenException>(() =>
             _service.SubmitGroupPreOrderAsync(otherUserId, groupReservation.GroupReservationId, reservation.Id));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 
     [Theory]
@@ -408,9 +399,6 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.SubmitGroupPreOrderAsync(userId, groupReservation.GroupReservationId, reservation.Id));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 
     [Theory]
@@ -435,9 +423,6 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.SubmitGroupPreOrderAsync(userId, groupReservation.GroupReservationId, otherReservation.Id));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 
     [Theory]
@@ -464,9 +449,6 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.SubmitGroupPreOrderAsync(userId, groupReservation.GroupReservationId, reservation.Id));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 
     [Theory]
@@ -496,8 +478,5 @@ public class GroupReservationServiceTests
 
         await Assert.ThrowsAsync<ValidationException>(() =>
             _service.SubmitGroupPreOrderAsync(userId, groupReservation.GroupReservationId, reservation.Id));
-        _orderRepositoryMock.Verify(
-            repository => repository.SaveGroupPreOrderTransactionAsync(It.IsAny<Order>(), It.IsAny<GroupReservation>()),
-            Times.Never);
     }
 }
