@@ -56,4 +56,21 @@ public class OrderRepository : IOrderRepository
     {
         await _dynamoDbContext.SaveAsync(order, DynamoConfig.SaveConfig(OrdersTableName));
     }
+
+    public async Task SaveGroupPreOrderTransactionAsync(Order order, GroupReservation groupReservation)
+    {
+        var orderWrite = _dynamoDbContext.CreateTransactWrite<Order>(new TransactWriteConfig
+        {
+            OverrideTableName = OrdersTableName
+        });
+        orderWrite.AddSaveItem(order);
+
+        var groupReservationWrite = _dynamoDbContext.CreateTransactWrite<GroupReservation>(new TransactWriteConfig
+        {
+            OverrideTableName = ResourceNames.GroupReservationsTableName
+        });
+        groupReservationWrite.AddSaveItem(groupReservation);
+
+        await _dynamoDbContext.ExecuteTransactWriteAsync([orderWrite, groupReservationWrite]);
+    }
 }

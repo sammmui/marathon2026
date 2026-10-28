@@ -157,12 +157,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /guest/groups/{groupReservationId}/submit:
+  /group-reservations/{groupReservationId}/submit:
     post:
       tags:
         - Group Reservations
       summary: Submit group pre-order
-      description: Submits the pre-order for a group reservation, converting guest sessions to orders
+      description: Submits the consolidated pre-order for a group reservation. Owner access only.
       operationId: submitGroupPreOrder
       parameters:
         - name: groupReservationId
@@ -171,6 +171,8 @@ paths:
           description: The ID of the group reservation
           schema:
             type: string
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -186,9 +188,34 @@ paths:
                 type: array
                 items:
                   type: object
-                  description: Enriched dishes data
+                  required:
+                    - dishId
+                    - quantity
+                  properties:
+                    dishId:
+                      type: string
+                    quantity:
+                      type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is not the reservation owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '400':
           description: Invalid request - missing parameters or validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Group reservation or reservation not found
           content:
             application/json:
               schema:
@@ -496,7 +523,7 @@ paths:
       tags:
         - Guest Sessions
       summary: Get owner's guest session ID
-      description: Retrieves the guest session ID for the reservation owner
+      description: Returns the existing owner session ID or creates it when absent. Owner access only.
       operationId: getOwnerSessionId
       parameters:
         - name: reservationId
@@ -521,7 +548,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
-          description: Reservation not found
+          description: Reservation or group reservation not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is not the reservation owner
           content:
             application/json:
               schema:

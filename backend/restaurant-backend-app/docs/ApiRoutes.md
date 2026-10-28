@@ -561,6 +561,7 @@ Response: `200 OK`
   "guestSessionId": "string"
 }
 ```
+Returns the existing owner session ID or creates the owner session if one does not exist. Owner only.
 
 
 ### `DELETE` /reservations
@@ -1180,11 +1181,18 @@ Response: 200 OK
 ```
 
 ### `POST` /group-reservations/{groupReservationId}/submit
-Response: 200 OK
+Request body:
 ```json
 {
-  "message": "Group reservation pre-order submitted successfully."
+  "reservationId": "string"
 }
+```
+Response: 200 OK
+```json
+[
+  { "dishId": "dish1", "quantity": 3 },
+  { "dishId": "dish2", "quantity": 2 }
+]
 ```
 
 ### `GET` /guest/groups/{groupReservationId}/sessions

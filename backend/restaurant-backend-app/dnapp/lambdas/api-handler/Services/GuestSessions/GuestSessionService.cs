@@ -178,6 +178,29 @@ public class GuestSessionService(
         return await GetGroupSnapshotAsync(groupReservationId, reservation);
     }
 
+    public async Task<string> GetOrCreateOwnerGuestSessionIdAsync(string userId, string reservationId)
+    {
+        Reservation reservation = await reservationRepository.GetReservationByIdAsync(reservationId)
+            ?? throw new ReservationNotFoundException($"Reservation {reservationId} was not found.");
+
+        if (reservation.CustomerId != userId)
+        {
+            throw new ActionForbiddenException("Only the reservation owner can perform this action.");
+        }
+
+        GroupReservation group = await groupReservationRepository.GetByReservationIdAsync(reservationId)
+            ?? throw new GroupReservationNotFoundException();
+
+        List<GuestSession> sessions = await guestSessionRepository.GetAllByGroupReservationIdAsync(group.GroupReservationId);
+        GuestSession? ownerSession = sessions.FirstOrDefault(session => session.IsOwnerSession);
+        if (ownerSession is not null)
+        {
+            return ownerSession.Id;
+        }
+
+        return await CreateGroupOwnerSessionAsync(userId, group.GroupReservationId);
+    }
+
     public async Task<GetAllSessionsResponse> DeleteGuestSessionAsync(string userId, string groupReservationId, string guestSessionId)
     {
         Reservation reservation = await ValidateReservationOwnerAsync(groupReservationId, userId);
@@ -329,8 +352,15 @@ public class GuestSessionService(
         return reservation;
     }
 
-    public async Task CreateGroupOwnerSessionAsync(string userId, string groupReservationId)
+    public async Task<string> CreateGroupOwnerSessionAsync(string userId, string groupReservationId)
     {
+        GuestSession? existingOwnerSession = (await guestSessionRepository.GetAllByGroupReservationIdAsync(groupReservationId))
+            .FirstOrDefault(session => session.IsOwnerSession);
+        if (existingOwnerSession is not null)
+        {
+            return existingOwnerSession.Id;
+        }
+
         var session = new GuestSession()
         {
             Id = Guid.NewGuid().ToString(),
@@ -342,6 +372,7 @@ public class GuestSessionService(
         };
 
         await guestSessionRepository.SaveAsync(session);
+        return session.Id;
     }
 
     public async Task<GetGuestSessionResponse> GetGuestSessionInfoAsync(string guestSessionId)
