@@ -24,3 +24,8 @@ node_modules/
 *.tfvars.json
 crash.log
 crash.*.log
+
+# Local seed requests may contain credentials or personal data
+backend/restaurant-backend-app/seed-data.http
+backend/restaurant-backend-app/seed-data.done.http
+backend/restaurant-backend-app/upload-images.ps1
